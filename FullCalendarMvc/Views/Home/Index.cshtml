@@ -1,0 +1,266 @@
+﻿<style>
+	body {
+		margin-top: 40px;
+		text-align: center;
+		font-size: 14px;
+		font-family: "Lucida Grande",Helvetica,Arial,Verdana,sans-serif;
+	}
+		
+	#wrap {
+		width: 1100px;
+		margin: 0 auto;
+	}
+		
+	#external-events {
+		float: left;
+		width: 150px;
+		padding: 10px 10px 0;
+		border: 1px solid #ccc;
+		background: #eee;
+		text-align: left;
+	}
+
+    #external-events input[type="text"] {
+        margin-bottom: 5px;
+    }
+		
+	#external-events h4 {
+		font-size: 16px;
+		margin-top: 0;
+		padding-top: 1em;
+	}
+		
+	#external-events .fc-event {
+	    background-color: #337ab7;
+		margin: 10px 0;
+	    padding: 4px 2px;
+		cursor: pointer;
+	}
+		
+	#external-events p {
+		margin: 1.5em 0;
+		font-size: 11px;
+		color: #666;
+	}
+		
+	#external-events p input {
+		margin: 0;
+		vertical-align: middle;
+	}
+
+	#calendar {
+		float: right;
+		width: 900px;
+	}
+
+    .modal-editar-evento .btn-group ul li span {
+        float: left;
+        height: 10px;
+        margin: 5px 0 0 2px;
+        width: 10px;
+    }
+
+    .fc-day-grid-event > .fc-content {
+        padding: 4px 2px;
+    }
+
+</style>
+<div id='wrap'>
+    <div id='external-events'>
+        <input type="text" id="txt-adicionar-evento" placeholder="Título" style="width: 125px;" />
+        <button id="btn-adicionar-evento" class="btn btn-info" style="width: 125px;">Adicionar&nbsp;<span class="glyphicon glyphicon-arrow-down" aria-hidden="true"></span></button>
+        <h6>Arraste os eventos para cadastrar</h6>
+        <div class="lista-de-eventos"></div>
+    </div>
+
+    <div id='calendar'></div>
+    
+    <div class="modal fade modal-editar-evento">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title">Editar Evento</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-horizontal">
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Título</label>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control" id="txt-titulo-evento" placeholder="Título" />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Tipo de evento</label>
+                            <div class="col-sm-9">
+                                <div class="btn-group pull-left">
+                                    <button type="button" class="btn btn-default btn-selecione-ddl-cor-evento">Selecione</button>
+                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul class="dropdown-menu" role="menu" id="ddl-cor-evento">
+                                        <li><a href="#" class="primary"><span style="background-color: #337ab7;"></span>&nbsp;Padrão</a></li>
+                                        <li><a href="#" class="danger"><span style="background-color: #c9302c;"></span>&nbsp;Urgente</a></li>
+                                        <li><a href="#" class="warning"><span style="background-color: #f0ad4e;"></span>&nbsp;Trabalho</a></li>
+                                        <li><a href="#" class="success"><span style="background-color: #5cb85c;"></span>&nbsp;Pessoal</a></li>
+                                        <li><a href="#" class="info"><span style="background-color: #5bc0de;"></span>&nbsp;Estudo</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" id="btn-cancelar-edicao" class="btn btn-default" data-dismiss="modal">Cancelar</button>
+                    <button type="button" id="btn-editar-evento" class="btn btn-primary">Salvar</button>
+                    <input type="hidden" id="hdf-id-evento-edicao" />
+                    <input type="hidden" id="hdf-cor-evento-edicao" />
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function ObterDataAtual() {
+        var date = new Date();
+        var yyyy = date.getFullYear().toString();
+        var mm = (date.getMonth() + 1).toString(); // getMonth() is zero-based         
+        var dd = date.getDate().toString();
+        return yyyy + '-' + (mm[1] ? mm : "0" + mm[0]) + '-' + (dd[1] ? dd : "0" + dd[0]);
+    }
+    
+    function IniciarEventos() {
+        $('#external-events .fc-event').each(function () {
+            // store data so the calendar knows to render an event upon drop
+            $(this).data('event', {
+                title: $.trim($(this).text()), // use the element's text as the event title
+                stick: true // maintain when user navigates (see docs on the renderEvent method)
+            });
+            // make the event draggable using jQuery UI
+            $(this).draggable({
+                zIndex: 999,
+                revert: true,      // will cause the event to go back to its
+                revertDuration: 0  //  original position after the drag
+            });
+        });
+    }
+    
+    $(document).ready(function () {
+
+        $("#btn-adicionar-evento").on("click", function () {
+            if ($("#txt-adicionar-evento").val() != "") {
+                $(".lista-de-eventos").append("<div class='fc-event ui-draggable ui-draggable-handle'>" + $("#txt-adicionar-evento").val() + "</div>");
+                $("#txt-adicionar-evento").val("");
+                IniciarEventos();//atualiza a lista de eventos para que o novo evento cadastro seja reconhecido pela função de drag
+            }
+        });
+		
+		$('#calendar').fullCalendar({
+			header: {
+				left: 'prev,next today',
+				center: 'title',
+				right: 'month,agendaWeek,agendaDay'
+			},
+			defaultDate: ObterDataAtual(),
+			dayNames: ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sabado'],
+			dayNamesShort: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'],
+			monthNames: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outrubro', 'Novembro', 'Dezembro'],
+			monthNamesShort: ['Jan', 'Fev', 'Mar', 'Abr', 'Maio', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
+		    allDayText: 'Dia inteiro',
+			buttonText: {
+			    today:    'Hoje',
+			    month:    'Mês',
+			    week:     'Semana',
+			    day:      'Dia'
+			},
+			events: "@Url.Action("ListarEventos")",//método responsável por listar os eventos
+		    droppable: true, // Permite arrastar eventos no calendário
+		    drop: function(date) {
+		        $(this).remove();//remove o evento da lista
+		        var titulo = $(this).html();
+		        $.ajax({
+		            type: 'POST',
+		            url: "@Url.Action("AdicionarEvento")" + "?title=" + titulo + "&start=" + date.format(),
+					    dataType: "json",
+					    contentType: "application/json",
+					    success: function () {
+					        $("#calendar").fullCalendar('removeEvents');
+					        $("#calendar").fullCalendar("refetchEvents");//Atualiza o calendário, assim o evento cadastrado recebe a id cadastrada no banco
+					    }
+		        });
+		    },
+		    eventClick: function (calEvent) {
+		        $("#hdf-id-evento-edicao").val(calEvent.id);
+		        $("#txt-titulo-evento").val(calEvent.title);
+		        $('.modal-editar-evento').modal('show');
+		    },
+			editable: true,
+			eventDrop: function (event) {//Chama a atualização de evento
+			    atualizarEvento(event.id, event.start, event.end);
+		    },
+		    eventResize: function (event) {//quando redimensiona um evento
+		        atualizarEvento(event.id, event.start, event.end);
+		    }
+		});
+	    
+        function atualizarEvento(eventId, eventStart, eventEnd) {
+            var visualizacaoAtual = $('#calendar').fullCalendar('getView').name;
+	        var dataRow = {
+	            'id': eventId,
+	            'newEventStart': eventStart,
+	            'newEventEnd': eventEnd,
+	            'visualizacaoAtual': visualizacaoAtual
+	        };
+	        $.ajax({
+	            type: 'POST',
+	            url: "@Url.Action("AtualizarEvento")",
+	            dataType: "json",
+	            contentType: "application/json",
+	            data: JSON.stringify(dataRow)
+	        });
+        }
+        
+        $(".dropdown-menu").on('click', 'li a', function () {
+            var classeBotao = $(this).attr("class");
+            $(".btn-selecione-ddl-cor-evento").removeClass("btn-default btn-success btn-danger btn-info btn-warning");
+            $(".btn-selecione-ddl-cor-evento").addClass("btn-" + classeBotao).text($(this).text()).val($(this).text());
+
+            var valorHiddenCor = "";
+            switch (classeBotao) {
+                case "primary":
+                    valorHiddenCor = "337ab7";
+                    break;
+                case "success":
+                    valorHiddenCor = "5cb85c";
+                    break;
+                case "danger":
+                    valorHiddenCor = "c9302c";
+                    break;
+                case "warning":
+                    valorHiddenCor = "f0ad4e";
+                    break;
+                case "info":
+                    valorHiddenCor = "5bc0de";
+                    break;
+            }
+            $("#hdf-cor-evento-edicao").val(valorHiddenCor);
+        });
+
+        $("#btn-editar-evento").click(function() {
+            $.ajax({
+                type: 'POST',
+                url: "@Url.Action("EditarEvento")" + "?id=" + $("#hdf-id-evento-edicao").val() + "&titulo=" + $("#txt-titulo-evento").val() + "&cor=" + $("#hdf-cor-evento-edicao").val(),
+		        dataType: "json",
+		        contentType: "application/json",
+		        success: function (data) {
+		            if (data.Sucesso) {
+		                $("#calendar").fullCalendar('removeEvents');
+		                $("#calendar").fullCalendar("refetchEvents");//Atualiza o calendário, assim o evento cadastrado recebe a id cadastrada no banco
+		                $('.modal-editar-evento').modal('hide');
+		            }
+		        }
+            });
+        });
+	});
+</script>
